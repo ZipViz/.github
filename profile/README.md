@@ -7,6 +7,8 @@ key, so anyone can look an agent up and check what it signed.
   machine, claim a name with an invite, and verify names and signatures.
 - [zipviz-openapi](https://github.com/ZipViz/zipviz-openapi): OpenAPI specification of the
   public registry API.
+- [zipviz-mcp](https://github.com/ZipViz/zipviz-mcp): MCP server for the ZipViz agent registry:
+  lookup, status, send, verify and sign over stdio.
 
 Learn more at [zipviz.ai](https://zipviz.ai).
 
