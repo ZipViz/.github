@@ -39,11 +39,20 @@ jobs:
         with:
           node-version: 24
       - run: node --test .github/scripts/latest-updates.test.mjs
-      # The README must keep exactly one pair of markers; this reads live public data and writes nothing.
+      # Reads live public data and writes nothing. Exit 2 (the block would change) is
+      # expected between weekly runs and passes; anything else fails the job, including
+      # missing or repeated markers, an API failure or a runtime error.
       - name: Render the block (read-only)
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: node .github/scripts/latest-updates.mjs --check || echo "The block would change; the weekly run proposes it."
+        run: |
+          status=0
+          node .github/scripts/latest-updates.mjs --check || status=$?
+          if [ "$status" -eq 2 ]; then
+            echo "The block would change; the weekly run proposes it."
+          elif [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
 
   update:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

@@ -1,7 +1,12 @@
 // Run with: node --test .github/scripts/latest-updates.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { END, START, buildBlock, cleanText, formatDate, replaceBlock } from "./latest-updates.mjs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { END, EXIT_WOULD_CHANGE, START, buildBlock, cleanText, formatDate, replaceBlock } from "./latest-updates.mjs";
 
 test("formatDate is DD/MM/YYYY in Sydney time", () => {
   assert.equal(formatDate("2026-11-18T08:55:49Z"), "18/11/2026");
@@ -69,4 +74,32 @@ test("replaceBlock refuses a README without exactly one pair of markers", () => 
   assert.throws(() => replaceBlock("no markers", "x"));
   assert.throws(() => replaceBlock(`${END}\n${START}`, "x"));
   assert.throws(() => replaceBlock(`${START}${END}${START}${END}`, "x"));
+});
+
+// The script run as the workflow runs it, in a scratch directory holding only a README.
+function runScript(readme) {
+  const dir = mkdtempSync(join(tmpdir(), "latest-updates-"));
+  try {
+    mkdirSync(join(dir, "profile"));
+    writeFileSync(join(dir, "profile", "README.md"), readme);
+    const script = fileURLToPath(new URL("./latest-updates.mjs", import.meta.url));
+    // An unroutable API host: if the script ever reached the network, it would fail differently.
+    return spawnSync(process.execPath, [script, "--check"], { cwd: dir, encoding: "utf8",
+      env: { PATH: process.env.PATH, HTTPS_PROXY: "http://127.0.0.1:9" } });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("a broken marker fails the job with exit 1, before any network call, never the would-change code", () => {
+  for (const readme of ["# ZipViz\n\nno markers\n", `${END}\n${START}\n`, `${START}\n${END}\n${START}\n${END}\n`]) {
+    const r = runScript(readme);
+    assert.equal(r.status, 1, readme);
+    assert.notEqual(r.status, EXIT_WOULD_CHANGE);
+    assert.match(r.stderr, /needs exactly one/);
+  }
+});
+
+test("expected drift has its own exit code", () => {
+  assert.equal(EXIT_WOULD_CHANGE, 2);
 });

@@ -6,7 +6,9 @@
 //
 //   node .github/scripts/latest-updates.mjs [--check]
 //
-// --check exits 1 when the file would change, without writing it.
+// --check writes nothing. Exit codes: 0 up to date (or written), 2 the block
+// would change (--check only, expected between weekly runs), 1 anything else:
+// missing or repeated markers, an API failure or a runtime error.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -17,6 +19,7 @@ export const README = "profile/README.md";
 export const START = "<!-- latest-updates:start -->";
 export const END = "<!-- latest-updates:end -->";
 const LIMIT = 5;
+export const EXIT_WOULD_CHANGE = 2;
 
 /** DD/MM/YYYY in Australia/Sydney. */
 export function formatDate(iso) {
@@ -88,6 +91,9 @@ async function api(path) {
 
 async function main() {
   const check = process.argv.includes("--check");
+  // Markers are checked before any network call, so a broken README fails on its own.
+  const before = readFileSync(README, "utf8");
+  replaceBlock(before, "");
   const releases = [];
   const pulls = [];
   for (const repo of REPOS) {
@@ -95,7 +101,6 @@ async function main() {
     // Most recently updated closed pull requests; merged ones among them are the newest merges.
     for (const p of await api(`/repos/${OWNER}/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=30`)) pulls.push({ ...p, repo });
   }
-  const before = readFileSync(README, "utf8");
   const after = replaceBlock(before, buildBlock({ releases, pulls }));
   if (after === before) {
     console.log(`${README} is up to date.`);
@@ -103,7 +108,7 @@ async function main() {
   }
   if (check) {
     console.log(`${README} would change.`);
-    process.exit(1);
+    process.exit(EXIT_WOULD_CHANGE);
   }
   writeFileSync(README, after);
   console.log(`Updated ${README}.`);
