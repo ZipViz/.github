@@ -1,0 +1,71 @@
+// Run with: node --test .github/scripts/latest-updates.test.mjs
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { END, START, buildBlock, cleanText, formatDate, replaceBlock } from "./latest-updates.mjs";
+
+test("formatDate is DD/MM/YYYY in Sydney time", () => {
+  assert.equal(formatDate("2026-11-18T08:55:49Z"), "18/11/2026");
+  // 20:00 UTC on 18/11 is the next morning in Sydney.
+  assert.equal(formatDate("2026-11-18T20:00:00Z"), "19/11/2026");
+});
+
+test("cleanText keeps list items plain and safe", () => {
+  assert.equal(cleanText("Release 2.0.0 \u2014 tools"), "Release 2.0.0, tools");
+  assert.equal(cleanText("Fix [link](x) <b>"), "Fix \\[link\\](x) &lt;b&gt;");
+  assert.equal(cleanText("Thanks @someone"), "Thanks `@someone`");
+});
+
+const pr = (repo, number, title, merged_at, login = "person", type = "User") => ({ repo, number, title, merged_at, html_url: `https://github.com/ZipViz/${repo}/pull/${number}`, user: { login, type } });
+const rel = (repo, tag_name, published_at, draft = false) => ({ repo, tag_name, published_at, draft, html_url: `https://github.com/ZipViz/${repo}/releases/tag/${tag_name}` });
+
+test("buildBlock lists the newest five of each, across repositories, without bots, drafts or unmerged pull requests", () => {
+  const pulls = [
+    pr("zipviz-mcp", 11, "Release zipviz-mcp 2.0.0", "2026-11-18T08:55:49Z"),
+    pr("zipviz-openapi", 2, "Add v1 signature test vectors", "2026-11-19T04:07:21Z"),
+    pr("zipviz-cli", 14, "Use neutral wording", "2026-10-27T04:28:38Z"),
+    pr("zipviz-cli", 12, "build(deps): bump x", "2026-11-19T09:00:00Z", "dependabot[bot]", "Bot"),
+    pr("zipviz-cli", 13, "Closed without merging", null),
+    pr("zipviz-cli", 9, "Older one", "2026-10-21T00:17:02Z"),
+    pr("zipviz-cli", 8, "Older two", "2026-10-20T19:58:50Z"),
+    pr("zipviz-cli", 7, "Oldest, dropped", "2026-10-17T04:47:19Z"),
+  ];
+  const releases = [rel("zipviz-mcp", "v2.0.0", "2026-11-19T01:00:00Z"), rel("zipviz-cli", "v0.2.0", null, true)];
+  const block = buildBlock({ releases, pulls });
+  assert.equal(
+    block,
+    [
+      "## Latest updates",
+      "",
+      "Releases:",
+      "",
+      "- [zipviz-mcp v2.0.0](https://github.com/ZipViz/zipviz-mcp/releases/tag/v2.0.0), 19/11/2026",
+      "",
+      "Merged pull requests:",
+      "",
+      "- zipviz-openapi: Add v1 signature test vectors ([#2](https://github.com/ZipViz/zipviz-openapi/pull/2)), 19/11/2026",
+      "- zipviz-mcp: Release zipviz-mcp 2.0.0 ([#11](https://github.com/ZipViz/zipviz-mcp/pull/11)), 18/11/2026",
+      "- zipviz-cli: Use neutral wording ([#14](https://github.com/ZipViz/zipviz-cli/pull/14)), 27/10/2026",
+      "- zipviz-cli: Older one ([#9](https://github.com/ZipViz/zipviz-cli/pull/9)), 21/10/2026",
+      "- zipviz-cli: Older two ([#8](https://github.com/ZipViz/zipviz-cli/pull/8)), 21/10/2026",
+    ].join("\n"),
+  );
+});
+
+test("buildBlock says so when there is nothing yet", () => {
+  const block = buildBlock({ releases: [], pulls: [] });
+  assert.ok(block.includes("- No releases yet."));
+  assert.ok(block.includes("- None yet."));
+});
+
+test("replaceBlock rewrites only the text between the markers and is stable", () => {
+  const readme = `# ZipViz\n\nIntro.\n\n${START}\nold\n${END}\n\nFooter.\n`;
+  const once = replaceBlock(readme, "new block");
+  assert.equal(once, `# ZipViz\n\nIntro.\n\n${START}\nnew block\n${END}\n\nFooter.\n`);
+  assert.equal(replaceBlock(once, "new block"), once);
+});
+
+test("replaceBlock refuses a README without exactly one pair of markers", () => {
+  assert.throws(() => replaceBlock("no markers", "x"));
+  assert.throws(() => replaceBlock(`${END}\n${START}`, "x"));
+  assert.throws(() => replaceBlock(`${START}${END}${START}${END}`, "x"));
+});

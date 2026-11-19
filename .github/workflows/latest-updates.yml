@@ -1,0 +1,85 @@
+name: Latest updates
+
+# Weekly refresh of the "Latest updates" block on the organization profile
+# (profile/README.md): the last five releases and merged pull requests across
+# the public repositories (.github/scripts/latest-updates.mjs).
+#
+# main takes changes through pull requests only, so a changed block is pushed
+# to the latest-updates branch and proposed as a pull request for review. An
+# unchanged week does nothing.
+
+on:
+  schedule:
+    # Mondays 22:00 UTC: Tuesday 09:00 in Sydney during daylight saving, 08:00 otherwise.
+    - cron: "0 22 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/scripts/latest-updates*.mjs"
+      - ".github/workflows/latest-updates.yml"
+      - "profile/README.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: latest-updates
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - run: node --test .github/scripts/latest-updates.test.mjs
+      # The README must keep exactly one pair of markers; this reads live public data and writes nothing.
+      - name: Render the block (read-only)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/latest-updates.mjs --check || echo "The block would change; the weekly run proposes it."
+
+  update:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # Credentials are kept for the one push to the latest-updates branch below.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Rewrite the block
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/latest-updates.mjs
+      - name: Propose the change
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- profile/README.md; then
+            echo "No change this week."
+            exit 0
+          fi
+          branch=latest-updates
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -m "ELU-1038: Refresh the Latest updates block" -- profile/README.md
+          git push --force origin "$branch"
+          if [ -n "$(gh pr list --head "$branch" --state open --json number --jq '.[].number')" ]; then
+            echo "Updated the open pull request on $branch."
+          else
+            gh pr create --head "$branch" --base main \
+              --title "ELU-1038: Refresh the Latest updates block" \
+              --body "Weekly refresh of the Latest updates block in profile/README.md, from the public repositories' releases and merged pull requests."
+          fi
