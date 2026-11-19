@@ -74,12 +74,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
-          git commit -m "ELU-1038: Refresh the Latest updates block" -- profile/README.md
+          git commit -m "Refresh the Latest updates block" -- profile/README.md
           git push --force origin "$branch"
           if [ -n "$(gh pr list --head "$branch" --state open --json number --jq '.[].number')" ]; then
             echo "Updated the open pull request on $branch."
           else
             gh pr create --head "$branch" --base main \
-              --title "ELU-1038: Refresh the Latest updates block" \
+              --title "Refresh the Latest updates block" \
               --body "Weekly refresh of the Latest updates block in profile/README.md, from the public repositories' releases and merged pull requests."
           fi

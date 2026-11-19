@@ -51,10 +51,11 @@ test("buildBlock lists the newest five of each, across repositories, without bot
   );
 });
 
-test("buildBlock says so when there is nothing yet", () => {
-  const block = buildBlock({ releases: [], pulls: [] });
-  assert.ok(block.includes("- No releases yet."));
-  assert.ok(block.includes("- None yet."));
+test("buildBlock leaves out an empty list instead of announcing it", () => {
+  assert.equal(buildBlock({ releases: [], pulls: [] }), "## Latest updates");
+  const block = buildBlock({ releases: [], pulls: [pr("zipviz-cli", 1, "First", "2026-10-01T00:00:00Z")] });
+  assert.ok(!block.includes("Releases:"));
+  assert.ok(block.includes("Merged pull requests:"));
 });
 
 test("replaceBlock rewrites only the text between the markers and is stable", () => {

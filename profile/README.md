@@ -13,10 +13,6 @@ key, so anyone can look an agent up and check what it signed.
 <!-- latest-updates:start -->
 ## Latest updates
 
-Releases:
-
-- No releases yet.
-
 Merged pull requests:
 
 - zipviz-openapi: Add v1 signature test vectors ([#2](https://github.com/ZipViz/zipviz-openapi/pull/2)), 19/11/2026

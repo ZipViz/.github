@@ -57,10 +57,10 @@ export function buildBlock({ releases, pulls }) {
     .map((p) => ({ repo: p.repo, date: p.merged_at, number: p.number, line: `- ${p.repo}: ${cleanText(p.title)} ([#${p.number}](${p.html_url})), ${formatDate(p.merged_at)}` }))
     .sort(newestFirst)
     .slice(0, LIMIT);
-  const lines = ["## Latest updates", "", "Releases:", ""];
-  lines.push(...(rel.length ? rel.map((r) => r.line) : ["- No releases yet."]));
-  lines.push("", "Merged pull requests:", "");
-  lines.push(...(prs.length ? prs.map((p) => p.line) : ["- None yet."]));
+  // An empty list is left out rather than announced.
+  const lines = ["## Latest updates"];
+  if (rel.length) lines.push("", "Releases:", "", ...rel.map((r) => r.line));
+  if (prs.length) lines.push("", "Merged pull requests:", "", ...prs.map((p) => p.line));
   return lines.join("\n");
 }
 
