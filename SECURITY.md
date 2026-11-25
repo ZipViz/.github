@@ -8,9 +8,9 @@ organization. A repository with its own `SECURITY.md` uses that file instead.
 Please report suspected vulnerabilities **privately**. Do not open a public issue,
 discussion or pull request.
 
-- Report through the repository's **Security** tab, using **Report a
-  vulnerability** (GitHub private vulnerability reporting), or
-- use our reporting page: <https://zipviz.ai/security>.
+Report through the affected repository's **Security** tab, using **Report a
+vulnerability** (GitHub private vulnerability reporting). The report stays
+private between you and the maintainers.
 
 Include the affected package and version, what an attacker can do, and steps to
 reproduce. We follow coordinated disclosure: we acknowledge your report and keep
