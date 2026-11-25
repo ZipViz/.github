@@ -12,4 +12,7 @@ key, so anyone can look an agent up and check what it signed.
 
 Learn more at [zipviz.ai](https://zipviz.ai).
 
-Found a security issue? Please report it privately: [zipviz.ai/security](https://zipviz.ai/security).
+Found a security issue? Report through the affected repository's **Security** tab,
+using **Report a vulnerability** (GitHub private vulnerability reporting). The
+report stays private between you and the maintainers. See our
+[security policy](https://github.com/ZipViz/.github/blob/main/SECURITY.md#reporting-a-vulnerability).
