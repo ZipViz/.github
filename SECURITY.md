@@ -42,6 +42,11 @@ Older releases do not receive fixes. Upgrade to the supported release to get one
    feeds `npm audit` and Dependabot alerts for downstream users, and request a CVE
    through GitHub when the issue warrants one.
 
+Drill record: steps 1 and 2 (a draft advisory, its temporary private fork and a
+branch pushed there, then closing the draft unpublished) were rehearsed on
+25/11/2026. Steps 3 and 4 (a coordinated release, publishing the advisory and
+requesting a CVE) were not exercised: both need a real vulnerability.
+
 ## Security releases
 
 For each security release we:
